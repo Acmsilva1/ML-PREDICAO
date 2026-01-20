@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Visão Visionária | Gestão Pro</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a0a0b; color: #fff; padding: 40px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .card { background: #151517; padding: 25px; border-radius: 15px; border: 1px solid #222; text-align: center; }
+        .card h3 { color: #888; font-size: 0.9rem; text-transform: uppercase; }
+        .card .valor { font-size: 2rem; font-weight: bold; margin: 10px 0; color: #a29bfe; }
+        .highlight { border-top: 4px solid #a29bfe; }
+        .btn { background: #a29bfe; border: none; color: white; padding: 15px 30px; border-radius: 8px; cursor: pointer; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <h1>Visão Macro do Negócio</h1>
+    <p>Análise baseada no histórico de <span id="meses">--</span> meses.</p>
+
+    <div class="grid">
+        <div class="card highlight">
+            <h3>Previsão Lucro Próximo Mês</h3>
+            <div class="valor" id="previsao">R$ 0,00</div>
+            <small>Baseado em Média Ponderada</small>
+        </div>
+        <div class="card">
+            <h3>Ticket Médio</h3>
+            <div class="valor" id="ticket">R$ 0,00</div>
+        </div>
+        <div class="card">
+            <h3>Crescimento vs Mês Anterior</h3>
+            <div class="valor" id="crescimento">0%</div>
+        </div>
+        <div class="card">
+            <h3>Produto Estrela (Faturamento)</h3>
+            <div class="valor" id="produto" style="font-size: 1.5rem;">---</div>
+        </div>
+    </div>
+
+    <button class="btn" onclick="carregarDados()">Atualizar Visão Estratégica</button>
+
+    <script>
+        async function carregarDados() {
+            const res = await fetch('/api/v1/ml_visionario');
+            const data = await res.json();
+            
+            document.getElementById('previsao').innerText = data.previsao_lucro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('ticket').innerText = data.ticket_medio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('crescimento').innerText = data.crescimento_mensal_perc + '%';
+            document.getElementById('produto').innerText = data.produto_estrela;
+            document.getElementById('meses').innerText = data.meses_analisados;
+        }
+        carregarDados();
+    </script>
+</body>
+</html>
