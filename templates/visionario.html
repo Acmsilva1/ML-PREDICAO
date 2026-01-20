@@ -2,70 +2,85 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>ML Visionário | André TI</title>
+    <title>BI Visionário | Dark Mode</title>
     <style>
-        :root { --bg: #0d1117; --card: #161b22; --accent: #58a6ff; --text: #c9d1d9; }
-        body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 40px; }
-        .container { max-width: 1000px; margin: auto; }
-        .header { border-bottom: 1px solid #30363d; padding-bottom: 20px; margin-bottom: 30px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
-        .card { background: var(--card); border: 1px solid #30363d; border-radius: 8px; padding: 20px; transition: 0.3s; }
-        .card:hover { border-color: var(--accent); }
-        .card h3 { font-size: 0.8rem; color: #8b949e; text-transform: uppercase; margin: 0; }
-        .card .valor { font-size: 1.8rem; font-weight: 600; margin: 15px 0; color: #fff; }
-        .btn { background: #238636; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; }
-        .btn:hover { background: #2ea043; }
+        :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --accent: #58a6ff; --green: #238636; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #c9d1d9; margin: 0; padding: 20px; }
+        .container { max-width: 1100px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 30px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .full { grid-column: 1 / -1; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { text-align: left; color: #8b949e; border-bottom: 1px solid var(--border); padding: 12px; }
+        td { padding: 12px; border-bottom: 1px solid #21262d; }
+        .val-pos { color: #3fb950; font-weight: bold; }
+        .val-neg { color: #f85149; }
+        .box-previsao { background: #1c2128; border-left: 5px solid var(--accent); padding: 20px; margin-bottom: 25px; border-radius: 4px; }
+        .btn { background: var(--green); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn:hover { opacity: 0.8; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Visão Visionária de Negócio</h1>
-            <p>Análise de tendência baseada em <span id="meses">--</span> meses de histórico.</p>
+            <h1>Visionário BI <small style="font-size: 12px; color: var(--accent);">André TI</small></h1>
+            <button class="btn" onclick="fetchData()">Recalcular Insights</button>
+        </div>
+
+        <div class="box-previsao">
+            <h3 style="margin:0; font-size: 0.8rem; color: var(--accent);">TENDÊNCIA DE LUCRO PRÓXIMO MÊS</h3>
+            <div style="font-size: 2.5rem; font-weight: bold; margin-top: 5px;" id="previsao">R$ 0,00</div>
         </div>
 
         <div class="grid">
-            <div class="card">
-                <h3>Previsão Próximo Lucro</h3>
-                <div class="valor" id="previsao">R$ 0,00</div>
+            <div class="card full">
+                <h3>Auditoria de Fluxo Mensal</h3>
+                <table id="tab-auditoria">
+                    <thead><tr><th>Mês</th><th>Vendas</th><th>Gastos</th><th>Lucro</th></tr></thead>
+                    <tbody></tbody>
+                </table>
             </div>
             <div class="card">
-                <h3>Ticket Médio Geral</h3>
-                <div class="valor" id="ticket">R$ 0,00</div>
+                <h3>Ranking Clientes</h3>
+                <table id="tab-clientes">
+                    <thead><tr><th>Comprador</th><th>Total</th></tr></thead>
+                    <tbody></tbody>
+                </table>
             </div>
             <div class="card">
-                <h3>Lucro Total Acumulado</h3>
-                <div class="valor" id="acumulado">R$ 0,00</div>
+                <h3>Ranking Produtos</h3>
+                <table id="tab-produtos">
+                    <thead><tr><th>Sabor</th><th>Total</th></tr></thead>
+                    <tbody></tbody>
+                </table>
             </div>
-            <div class="card">
-                <h3>Produto Mais Rentável</h3>
-                <div class="valor" id="produto" style="font-size: 1.2rem;">---</div>
-            </div>
-        </div>
-
-        <div style="margin-top: 40px;">
-            <button class="btn" onclick="fetchML()">Recalcular Tendências</button>
         </div>
     </div>
 
     <script>
-        async function fetchML() {
-            try {
-                const res = await fetch('/api/v1/ml_visionario');
-                const data = await res.json();
-                
-                if(data.erro) { alert("Erro: " + data.erro); return; }
+        async function fetchData() {
+            const res = await fetch('/api/v1/ml_visionario');
+            const d = await res.json();
+            if(d.erro) { alert("Erro nos dados: " + d.erro); return; }
 
-                document.getElementById('previsao').innerText = data.previsao_lucro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                document.getElementById('ticket').innerText = data.ticket_medio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                document.getElementById('acumulado').innerText = data.lucro_total_acumulado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                document.getElementById('produto').innerText = data.produto_estrela;
-                document.getElementById('meses').innerText = data.meses_analisados;
-            } catch (e) {
-                console.error("Erro na requisição", e);
-            }
+            document.getElementById('previsao').innerText = d.previsao.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+
+            const draw = (id, data, keys) => {
+                document.querySelector(`#${id} tbody`).innerHTML = data.map(row => 
+                    `<tr>${keys.map(k => {
+                        let v = row[k];
+                        let style = (k === 'lucro' && v < 0) ? 'class="val-neg"' : (k === 'lucro' ? 'class="val-pos"' : '');
+                        return `<td ${style}>${typeof v === 'number' ? v.toLocaleString('pt-BR', {style:'currency', currency:'BRL'}) : v}</td>`;
+                    }).join('')}</tr>`
+                ).join('');
+            };
+
+            draw('tab-auditoria', d.auditoria_mensal, ['mes', 'vendas', 'gastos', 'lucro']);
+            draw('tab-clientes', d.ranking_compradores, ['CLIENTE', 'VALOR']);
+            draw('tab-produtos', d.ranking_produtos, ['SABOR', 'VALOR']);
         }
-        fetchML();
+        fetchData();
     </script>
 </body>
 </html>
