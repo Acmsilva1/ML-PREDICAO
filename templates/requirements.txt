@@ -1,8 +1,0 @@
-fastapi
-uvicorn
-pandas
-gspread
-google-genai
-scikit-learn
-jinja2
-pytz
