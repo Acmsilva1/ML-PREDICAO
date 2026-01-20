@@ -2,55 +2,70 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Visão Visionária | Gestão Pro</title>
+    <title>ML Visionário | André TI</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a0a0b; color: #fff; padding: 40px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-        .card { background: #151517; padding: 25px; border-radius: 15px; border: 1px solid #222; text-align: center; }
-        .card h3 { color: #888; font-size: 0.9rem; text-transform: uppercase; }
-        .card .valor { font-size: 2rem; font-weight: bold; margin: 10px 0; color: #a29bfe; }
-        .highlight { border-top: 4px solid #a29bfe; }
-        .btn { background: #a29bfe; border: none; color: white; padding: 15px 30px; border-radius: 8px; cursor: pointer; margin-top: 30px; }
+        :root { --bg: #0d1117; --card: #161b22; --accent: #58a6ff; --text: #c9d1d9; }
+        body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 40px; }
+        .container { max-width: 1000px; margin: auto; }
+        .header { border-bottom: 1px solid #30363d; padding-bottom: 20px; margin-bottom: 30px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .card { background: var(--card); border: 1px solid #30363d; border-radius: 8px; padding: 20px; transition: 0.3s; }
+        .card:hover { border-color: var(--accent); }
+        .card h3 { font-size: 0.8rem; color: #8b949e; text-transform: uppercase; margin: 0; }
+        .card .valor { font-size: 1.8rem; font-weight: 600; margin: 15px 0; color: #fff; }
+        .btn { background: #238636; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        .btn:hover { background: #2ea043; }
     </style>
 </head>
 <body>
-    <h1>Visão Macro do Negócio</h1>
-    <p>Análise baseada no histórico de <span id="meses">--</span> meses.</p>
+    <div class="container">
+        <div class="header">
+            <h1>Visão Visionária de Negócio</h1>
+            <p>Análise de tendência baseada em <span id="meses">--</span> meses de histórico.</p>
+        </div>
 
-    <div class="grid">
-        <div class="card highlight">
-            <h3>Previsão Lucro Próximo Mês</h3>
-            <div class="valor" id="previsao">R$ 0,00</div>
-            <small>Baseado em Média Ponderada</small>
+        <div class="grid">
+            <div class="card">
+                <h3>Previsão Próximo Lucro</h3>
+                <div class="valor" id="previsao">R$ 0,00</div>
+            </div>
+            <div class="card">
+                <h3>Ticket Médio Geral</h3>
+                <div class="valor" id="ticket">R$ 0,00</div>
+            </div>
+            <div class="card">
+                <h3>Lucro Total Acumulado</h3>
+                <div class="valor" id="acumulado">R$ 0,00</div>
+            </div>
+            <div class="card">
+                <h3>Produto Mais Rentável</h3>
+                <div class="valor" id="produto" style="font-size: 1.2rem;">---</div>
+            </div>
         </div>
-        <div class="card">
-            <h3>Ticket Médio</h3>
-            <div class="valor" id="ticket">R$ 0,00</div>
-        </div>
-        <div class="card">
-            <h3>Crescimento vs Mês Anterior</h3>
-            <div class="valor" id="crescimento">0%</div>
-        </div>
-        <div class="card">
-            <h3>Produto Estrela (Faturamento)</h3>
-            <div class="valor" id="produto" style="font-size: 1.5rem;">---</div>
+
+        <div style="margin-top: 40px;">
+            <button class="btn" onclick="fetchML()">Recalcular Tendências</button>
         </div>
     </div>
 
-    <button class="btn" onclick="carregarDados()">Atualizar Visão Estratégica</button>
-
     <script>
-        async function carregarDados() {
-            const res = await fetch('/api/v1/ml_visionario');
-            const data = await res.json();
-            
-            document.getElementById('previsao').innerText = data.previsao_lucro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            document.getElementById('ticket').innerText = data.ticket_medio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            document.getElementById('crescimento').innerText = data.crescimento_mensal_perc + '%';
-            document.getElementById('produto').innerText = data.produto_estrela;
-            document.getElementById('meses').innerText = data.meses_analisados;
+        async function fetchML() {
+            try {
+                const res = await fetch('/api/v1/ml_visionario');
+                const data = await res.json();
+                
+                if(data.erro) { alert("Erro: " + data.erro); return; }
+
+                document.getElementById('previsao').innerText = data.previsao_lucro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                document.getElementById('ticket').innerText = data.ticket_medio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                document.getElementById('acumulado').innerText = data.lucro_total_acumulado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                document.getElementById('produto').innerText = data.produto_estrela;
+                document.getElementById('meses').innerText = data.meses_analisados;
+            } catch (e) {
+                console.error("Erro na requisição", e);
+            }
         }
-        carregarDados();
+        fetchML();
     </script>
 </body>
 </html>
