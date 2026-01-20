@@ -20,9 +20,10 @@ def get_db_connection():
     gc = gspread.service_account_from_dict(creds_dict)
     return gc.open_by_key(SPREADSHEET_ID)
 
-def limpar_valor(valor):
-    if pd.isna(valor) or valor == "": return 0.0
-    s = str(valor).replace('R$', '').replace('.', '').replace(',', '.').strip()
+def limpar_moeda(v):
+    if not v or v == "": return 0.0
+    # Limpeza robusta: remove R$, pontos de milhar e ajusta a vírgula decimal
+    s = str(v).replace('R$', '').replace('.', '').replace(',', '.').strip()
     try:
         return float(re.sub(r'[^\d.]', '', s))
     except:
@@ -35,44 +36,52 @@ async def api_ml():
         df_vendas = pd.DataFrame(sh.worksheet("VENDAS").get_all_records())
         df_gastos = pd.DataFrame(sh.worksheet("GASTOS").get_all_records())
 
-        # Processamento de Dados
-        df_vendas['DT'] = pd.to_datetime(df_vendas['DATA E HORA'], dayfirst=True)
-        df_vendas['VALOR'] = df_vendas['VALOR DA VENDA'].apply(limpar_valor)
-        df_gastos['VALOR'] = df_gastos['VALOR'].apply(limpar_valor)
+        # Tratamento de Valores
+        df_vendas['VALOR'] = df_vendas['VALOR DA VENDA'].apply(limpar_moeda)
+        df_gastos['VALOR'] = df_gastos['VALOR'].apply(limpar_moeda)
 
-        # Agrupamento Mensal
-        vendas_m = df_vendas.set_index('DT').resample('M')['VALOR'].sum()
-        gastos_m = df_gastos.set_index('DT').resample('M')['VALOR'].sum()
+        # Tratamento de Datas (Sincronizado com seu Flow do GitHub)
+        df_vendas['DT'] = pd.to_datetime(df_vendas['DATA E HORA'], dayfirst=True, errors='coerce')
+        df_gastos['DT'] = pd.to_datetime(df_gastos['DATA E HORA'], dayfirst=True, errors='coerce')
         
+        # Remove linhas com datas corrompidas para não quebrar o agrupamento
+        df_vendas = df_vendas.dropna(subset=['DT'])
+        df_gastos = df_gastos.dropna(subset=['DT'])
+
+        # Agrupamento Mensal (Cruzamento Raiz)
+        # 'ME' é o novo padrão do Pandas para Month End
+        vendas_m = df_vendas.set_index('DT').resample('ME')['VALOR'].sum()
+        gastos_m = df_gastos.set_index('DT').resample('ME')['VALOR'].sum()
+        
+        # Criação da Tabela de Performance
         df_resumo = pd.DataFrame({'Vendas': vendas_m, 'Gastos': gastos_m}).fillna(0)
         df_resumo['Lucro'] = df_resumo['Vendas'] - df_resumo['Gastos']
-        
-        # --- MÉTRICAS RECOMENDADAS (6 MESES) ---
-        
-        # 1. Previsão Próximo Mês (Média Ponderada: peso maior para o mês atual)
+
+        # --- LÓGICA DE PREDIÇÃO DINÂMICA ---
         if len(df_resumo) >= 2:
-            peso_atual = 0.7
-            peso_anterior = 0.3
-            previsao = (df_resumo['Lucro'].iloc[-1] * peso_atual) + (df_resumo['Lucro'].iloc[-2] * peso_anterior)
+            # Tendência baseada no deslocamento dos últimos meses
+            ultimo_lucro = df_resumo['Lucro'].iloc[-1]
+            penultimo_lucro = df_resumo['Lucro'].iloc[-2]
+            tendencia = ultimo_lucro - penultimo_lucro
+            previsao = ultimo_lucro + tendencia
         else:
-            previsao = df_resumo['Lucro'].mean()
+            previsao = df_resumo['Lucro'].sum()
 
-        # 2. KPI Trimestral (Últimos 3 meses vs 3 meses anteriores)
-        ticket_medio = df_vendas['VALOR'].mean()
-        crescimento_mensal = df_resumo['Vendas'].pct_change().iloc[-1] * 100 if len(df_resumo) > 1 else 0
-
-        # 3. Produto "Estrela" (O que mais traz grana, não o que mais sai)
-        produto_estrela = df_vendas.groupby('SABORES')['VALOR'].sum().idxmax()
+        # KPIs Estratégicos
+        ticket_medio = df_vendas['VALOR'].mean() if not df_vendas.empty else 0
+        produto_estrela = df_vendas.groupby('SABORES')['VALOR'].sum().idxmax() if not df_vendas.empty else "N/A"
+        crescimento = df_resumo['Vendas'].pct_change().iloc[-1] * 100 if len(df_resumo) > 1 else 0
 
         return {
             "previsao_lucro": round(previsao, 2),
             "ticket_medio": round(ticket_medio, 2),
-            "crescimento_mensal_perc": round(crescimento_mensal, 2),
+            "crescimento_mensal_perc": round(crescimento, 2),
             "produto_estrela": produto_estrela,
-            "total_vendas_periodo": round(df_resumo['Vendas'].sum(), 2),
+            "lucro_total_acumulado": round(df_resumo['Lucro'].sum(), 2),
             "meses_analisados": len(df_resumo)
         }
     except Exception as e:
+        print(f"Erro Crítico: {e}")
         return {"erro": str(e)}
 
 @app.get("/", response_class=HTMLResponse)
