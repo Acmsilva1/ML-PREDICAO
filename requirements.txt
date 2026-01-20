@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+pandas
+gspread
+jinja2
+python-dateutil
