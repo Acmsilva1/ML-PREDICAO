@@ -32,7 +32,7 @@ async def api_ml():
         df_vendas = pd.DataFrame(sh.worksheet("VENDAS").get_all_records())
         df_gastos = pd.DataFrame(sh.worksheet("GASTOS").get_all_records())
 
-        # Normalização de Colunas (Evita erros de espaços extras)
+        # Normalização de Colunas
         df_vendas.columns = [c.strip() for c in df_vendas.columns]
         df_gastos.columns = [c.strip() for c in df_gastos.columns]
 
@@ -46,25 +46,19 @@ async def api_ml():
         df_vendas = df_vendas.dropna(subset=['DT'])
         df_gastos = df_gastos.dropna(subset=['DT'])
 
-        # Agrupamento Mensal (Auditoria)
+        # AGREGADOR CONTÁBIL: Agrupamento Mensal desde o início
         vendas_m = df_vendas.set_index('DT').resample('ME')['VAL_NUM'].sum()
         gastos_m = df_gastos.set_index('DT').resample('ME')['VAL_NUM'].sum()
         
         df_resumo = pd.DataFrame({'vendas': vendas_m, 'gastos': gastos_m}).fillna(0)
         df_resumo['lucro'] = df_resumo['vendas'] - df_resumo['gastos']
-        df_resumo['mes'] = df_resumo.index.strftime('%b/%Y')
+        df_resumo['mes'] = df_resumo.index.strftime('%m/%Y') # Formato numérico para melhor ordenação
 
-        # Lógica de Predição Nova (Tendência dos últimos 2 meses)
-        if len(df_resumo) >= 2:
-            ultimo = df_resumo['lucro'].iloc[-1]
-            tendencia = ultimo - df_resumo['lucro'].iloc[-2]
-            previsao = ultimo + tendencia
-        else:
-            previsao = df_resumo['lucro'].mean()
+        # VISÃO MACRO: Lucro Total Acumulado (O que sobrou no bolso no total)
+        lucro_total_historico = df_resumo['lucro'].sum()
 
-        # Rankings (Aqui tratamos a coluna "DADOS DO COMPRADOR")
+        # Rankings de Performance
         col_cliente = "DADOS DO COMPRADOR" if "DADOS DO COMPRADOR" in df_vendas.columns else df_vendas.columns[1]
-        
         top_compradores = df_vendas.groupby(col_cliente)['VAL_NUM'].sum().nlargest(5).reset_index()
         top_compradores.columns = ['CLIENTE', 'VALOR']
         
@@ -72,8 +66,8 @@ async def api_ml():
         top_produtos.columns = ['SABOR', 'VALOR']
 
         return {
-            "previsao": round(previsao, 2),
-            "auditoria_mensal": df_resumo.tail(12).to_dict(orient='records'),
+            "lucro_total": round(lucro_total_historico, 2), # O contador substitui a "previsão"
+            "auditoria_mensal": df_resumo.to_dict(orient='records'),
             "ranking_compradores": top_compradores.to_dict(orient='records'),
             "ranking_produtos": top_produtos.to_dict(orient='records')
         }
