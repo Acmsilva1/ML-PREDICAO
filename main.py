@@ -31,21 +31,26 @@ async def api_ml():
         df_vendas = pd.DataFrame(sh.worksheet("VENDAS").get_all_records())
         df_gastos = pd.DataFrame(sh.worksheet("GASTOS").get_all_records())
 
+        # Limpeza e Datas
         df_vendas['VAL_NUM'] = df_vendas['VALOR DA VENDA'].apply(limpar_moeda)
         df_gastos['VAL_NUM'] = df_gastos['VALOR'].apply(limpar_moeda)
         df_vendas['DT'] = pd.to_datetime(df_vendas['DATA E HORA'], dayfirst=True, errors='coerce')
         df_gastos['DT'] = pd.to_datetime(df_gastos['DATA E HORA'], dayfirst=True, errors='coerce')
         df_vendas = df_vendas.dropna(subset=['DT'])
 
-        # --- LÓGICA DE EXPLOSÃO PARA O MACRO ---
+        # --- EXPLOSÃO DE SABORES (CORRIGIDO) ---
         df_vendas['SAB_LIST'] = df_vendas['SABORES'].astype(str).str.split(',')
-        df_exploded = df_vendas.explode('S_LIST') # Corrigido para explodir os sabores individuais
-        
+        # Aqui estava o erro 'S_LIST' vs 'SAB_LIST'
+        df_exploded = df_vendas.explode('SAB_LIST') 
+        df_exploded['SAB_LIST'] = df_exploded['SAB_LIST'].str.strip().str.upper()
+
+        # Ajuste de valor proporcional por item na linha
+        df_exploded['COUNT_ITENS'] = df_exploded.groupby(level=0)['SAB_LIST'].transform('count')
+        df_exploded['VAL_UNITARIO'] = df_exploded['VAL_NUM'] / df_exploded['COUNT_ITENS']
+
         # Agrupamento Mensal
         vendas_m = df_vendas.set_index('DT').resample('ME')['VAL_NUM'].sum()
         gastos_m = df_gastos.set_index('DT').resample('ME')['VAL_NUM'].sum()
-        # Contagem de itens reais (explodidos) por mês
-        df_exploded = df_vendas.assign(SAB_LIST=df_vendas['SABORES'].str.split(',')).explode('SAB_LIST')
         itens_m = df_exploded.set_index('DT').resample('ME')['SAB_LIST'].count()
 
         df_resumo = pd.DataFrame({'vendas': vendas_m, 'gastos': gastos_m, 'itens': itens_m}).fillna(0)
@@ -53,9 +58,11 @@ async def api_ml():
         df_resumo['ticket_medio'] = df_resumo['vendas'] / df_resumo['itens'].replace(0, 1)
         df_resumo['mes'] = df_resumo.index.strftime('%m/%Y')
 
-        # Ranking de Produtos (Lógica de separação por vírgula)
-        top_produtos = df_exploded.groupby('SAB_LIST')['VAL_NUM'].sum().nlargest(10).reset_index()
-        top_produtos.columns = ['SABOR', 'VALOR']
+        # Ranking com valores proporcionais
+        top_produtos = df_exploded.groupby('SAB_LIST').agg(
+            total=('VAL_UNITARIO', 'sum'),
+            qtd=('SAB_LIST', 'count')
+        ).nlargest(10, 'qtd').reset_index()
 
         return {
             "totais": {
@@ -68,6 +75,7 @@ async def api_ml():
             "ranking_produtos": top_produtos.to_dict(orient='records')
         }
     except Exception as e:
+        # Retorna o erro exato para o log/alerta do navegador
         return {"erro": str(e)}
 
 @app.get("/", response_class=HTMLResponse)
