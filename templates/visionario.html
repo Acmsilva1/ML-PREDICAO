@@ -1,34 +1,139 @@
-<script>
-    const fmt = (v) => v.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Analista Contábil - Macro</title>
+    <style>
+        :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --accent: #238636; --blue: #58a6ff; --red: #f85149; --yellow: #f1c40f; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #c9d1d9; margin: 0; padding: 20px; }
+        .container { max-width: 1100px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 30px; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px; }
+        .full { grid-column: 1 / -1; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; position: relative; }
+        .card h3 { margin: 0 0 10px 0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
+        .val-macro { font-size: 1.8rem; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 10px; }
+        th { text-align: left; color: #8b949e; border-bottom: 1px solid var(--border); padding: 12px; text-transform: uppercase; font-size: 0.7rem; }
+        td { padding: 12px; border-bottom: 1px solid #21262d; }
+        .val-pos { color: #3fb950; font-weight: bold; }
+        .val-neg { color: var(--red); font-weight: bold; }
+        .btn { background: #21262d; color: #c9d1d9; border: 1px solid var(--border); padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn:hover { background: var(--border); }
+        .capitalize { text-transform: capitalize; }
+        .loading { opacity: 0.4; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div class="container" id="main-content">
+        <div class="header">
+            <h1>Analista <small style="font-size: 12px; color: var(--blue);">Consolidado Histórico</small></h1>
+            <button class="btn" onclick="fetchData()">Recarregar Dados</button>
+        </div>
 
-    async function fetchData() {
-        const res = await fetch('/api/v1/ml_visionario');
-        const d = await res.json();
-        
-        // Dash Totais (Adicionei o contador de itens no faturamento se quiser)
-        document.getElementById('total_vendas').innerHTML = `${fmt(d.totais.faturamento)} <br><small style="font-size:12px">${d.totais.total_itens} itens</small>`;
-        document.getElementById('total_gastos').innerText = fmt(d.totais.custos);
-        document.getElementById('total_lucro').innerText = fmt(d.totais.lucro);
+        <div class="grid">
+            <div class="card" style="border-top: 4px solid var(--blue);">
+                <h3 style="color: var(--blue);">Faturamento Bruto</h3>
+                <div class="val-macro" id="total_vendas">R$ 0,00</div>
+            </div>
+            <div class="card" style="border-top: 4px solid var(--red);">
+                <h3 style="color: var(--red);">Custo Operacional</h3>
+                <div class="val-macro" id="total_gastos">R$ 0,00</div>
+            </div>
+            <div class="card" style="border-top: 4px solid var(--accent);">
+                <h3 style="color: var(--accent);">Lucro Líquido</h3>
+                <div class="val-macro" id="total_lucro">R$ 0,00</div>
+            </div>
+        </div>
 
-        // Auditoria Mensal com Ticket Médio
-        const tbodyAuditoria = document.querySelector("#tab-auditoria tbody");
-        tbodyAuditoria.innerHTML = d.auditoria_mensal.map(row => `
-            <tr>
-                <td>${row.mes}</td>
-                <td>${fmt(row.vendas)}</td>
-                <td>${fmt(row.gastos)}</td>
-                <td class="${row.lucro >= 0 ? 'val-pos' : 'val-neg'}">${fmt(row.lucro)}</td>
-                <td style="color: var(--blue)">${fmt(row.ticket_medio)}</td>
-            </tr>
-        `).reverse().join('');
+        <div class="grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="card full">
+                <h3>Auditoria de Fluxo Mensal (Cronológico)</h3>
+                <table id="tab-auditoria">
+                    <thead>
+                        <tr>
+                            <th>Mês</th>
+                            <th>Vendas</th>
+                            <th>Gastos</th>
+                            <th>Lucro</th>
+                            <th style="color: var(--blue)">Ticket Médio</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            
+            <div class="card full">
+                <h3>Ranking Histórico de Produtos (Explodido)</h3>
+                <table id="tab-produtos">
+                    <thead>
+                        <tr>
+                            <th>Sabor</th>
+                            <th>Qtd Real</th>
+                            <th>Faturamento Total</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-        // Ranking de Produtos com QTD Real
-        document.querySelector("#tab-produtos tbody").innerHTML = d.ranking_produtos.map(p => `
-            <tr>
-                <td style="text-transform: capitalize;">${p.SABOR.toLowerCase()}</td>
-                <td>${p.QTD}</td>
-                <td>${fmt(p.VALOR)}</td>
-            </tr>
-        `).join('');
-    }
-</script>
+    <script>
+        // Formatação profissional para moeda brasileira
+        const fmt = (v) => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+
+        async function fetchData() {
+            const container = document.getElementById('main-content');
+            container.classList.add('loading');
+
+            try {
+                // Rota sincronizada com o Agente Contador no Python
+                const res = await fetch('/api/v1/ml_visionario');
+                const d = await res.json();
+
+                if(d.erro) { 
+                    alert("Erro na API: " + d.erro); 
+                    return; 
+                }
+
+                // 1. Atualiza os Cards de Cima
+                document.getElementById('total_vendas').innerText = fmt(d.totais.faturamento);
+                document.getElementById('total_gastos').innerText = fmt(d.totais.custos);
+                document.getElementById('total_lucro').innerText = fmt(d.totais.lucro);
+
+                // 2. Renderiza Auditoria Mensal
+                const tbodyAuditoria = document.querySelector("#tab-auditoria tbody");
+                tbodyAuditoria.innerHTML = d.auditoria_mensal.map(row => `
+                    <tr>
+                        <td>${row.mes}</td>
+                        <td>${fmt(row.vendas)}</td>
+                        <td>${fmt(row.gastos)}</td>
+                        <td class="${row.lucro >= 0 ? 'val-pos' : 'val-neg'}">${fmt(row.lucro)}</td>
+                        <td style="color: var(--blue); font-weight: bold;">${fmt(row.ticket_medio)}</td>
+                    </tr>
+                `).reverse().join(''); // Mais recentes primeiro
+
+                // 3. Renderiza Ranking de Produtos
+                const tbodyProdutos = document.querySelector("#tab-produtos tbody");
+                tbodyProdutos.innerHTML = d.ranking_produtos.map(p => `
+                    <tr>
+                        <td class="capitalize">${p.SABOR.toLowerCase()}</td>
+                        <td><strong>${p.QTD}</strong> itens</td>
+                        <td class="val-pos">${fmt(p.VALOR)}</td>
+                    </tr>
+                `).join('');
+
+            } catch (err) {
+                console.error("Erro fatal de renderização:", err);
+                alert("Erro ao carregar dados. Verifique o console (F12).");
+            } finally {
+                container.classList.remove('loading');
+            }
+        }
+
+        // Inicializa o carregamento
+        fetchData();
+    </script>
+</body>
+</html>
