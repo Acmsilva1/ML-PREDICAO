@@ -53,7 +53,8 @@
                     <thead>
                         <tr>
                             <th>Mês</th>
-                            <th>Vendas</th>
+                            <th>Vendas (R$)</th>
+                            <th style="text-align: center;">Qtd. Itens</th>
                             <th>Gastos</th>
                             <th>Lucro</th>
                             <th style="color: var(--blue)">Ticket Médio</th>
@@ -80,7 +81,6 @@
     </div>
 
     <script>
-        // Formatação para Real Brasileiro
         const fmt = (v) => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
 
         async function fetchData() {
@@ -88,33 +88,30 @@
             container.classList.add('loading');
 
             try {
-                // Endpoint do Agente Contador
                 const res = await fetch('/api/v1/ml_visionario');
                 const d = await res.json();
 
-                if(d.erro) { 
-                    alert("Erro no Servidor: " + d.erro); 
-                    return; 
-                }
+                if(d.erro) { alert("Erro: " + d.erro); return; }
 
-                // 1. Preenche os Cards Superiores
+                // 1. Totais Superiores
                 document.getElementById('total_vendas').innerHTML = `${fmt(d.totais.faturamento)} <br><small style="font-size:12px; color:var(--blue)">${d.totais.total_itens} produtos vendidos</small>`;
                 document.getElementById('total_gastos').innerText = fmt(d.totais.custos);
                 document.getElementById('total_lucro').innerText = fmt(d.totais.lucro);
 
-                // 2. Tabela de Auditoria Mensal
+                // 2. Tabela de Auditoria com Volume Mensal
                 const tbodyAuditoria = document.querySelector("#tab-auditoria tbody");
                 tbodyAuditoria.innerHTML = d.auditoria_mensal.map(row => `
                     <tr>
                         <td>${row.mes}</td>
                         <td>${fmt(row.vendas)}</td>
+                        <td style="text-align: center;"><strong>${row.itens}</strong> un.</td>
                         <td>${fmt(row.gastos)}</td>
                         <td class="${row.lucro >= 0 ? 'val-pos' : 'val-neg'}">${fmt(row.lucro)}</td>
                         <td style="color: var(--blue); font-weight: bold;">${fmt(row.ticket_medio)}</td>
                     </tr>
                 `).reverse().join(''); 
 
-                // 3. Tabela de Ranking (usando as chaves corrigidas do Python)
+                // 3. Ranking de Produtos
                 const tbodyProdutos = document.querySelector("#tab-produtos tbody");
                 tbodyProdutos.innerHTML = d.ranking_produtos.map(p => `
                     <tr>
@@ -125,14 +122,11 @@
                 `).join('');
 
             } catch (err) {
-                console.error("Erro ao carregar dados:", err);
-                alert("Falha na comunicação com a API. Verifique o console.");
+                console.error("Erro:", err);
             } finally {
                 container.classList.remove('loading');
             }
         }
-
-        // Executa ao carregar a página
         fetchData();
     </script>
 </body>
