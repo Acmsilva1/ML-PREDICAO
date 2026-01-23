@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Analista Contábil - Macro</title>
     <style>
-        :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --accent: #238636; --blue: #58a6ff; --red: #f85149; --yellow: #f1c40f; }
+        :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --accent: #238636; --blue: #58a6ff; --red: #f85149; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: #c9d1d9; margin: 0; padding: 20px; }
         .container { max-width: 1100px; margin: auto; }
         .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 30px; }
@@ -20,15 +20,15 @@
         .val-neg { color: var(--red); font-weight: bold; }
         .btn { background: #21262d; color: #c9d1d9; border: 1px solid var(--border); padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
         .btn:hover { background: var(--border); }
+        .loading { opacity: 0.5; pointer-events: none; }
         .capitalize { text-transform: capitalize; }
-        .loading { opacity: 0.4; pointer-events: none; }
     </style>
 </head>
 <body>
     <div class="container" id="main-content">
         <div class="header">
             <h1>Analista <small style="font-size: 12px; color: var(--blue);">Consolidado Histórico</small></h1>
-            <button class="btn" onclick="fetchData()">Recarregar Dados</button>
+            <button class="btn" onclick="fetchData()">Atualizar Dashboard</button>
         </div>
 
         <div class="grid">
@@ -48,7 +48,7 @@
 
         <div class="grid" style="grid-template-columns: 1fr 1fr;">
             <div class="card full">
-                <h3>Auditoria de Fluxo Mensal (Cronológico)</h3>
+                <h3>Histórico Mensal e Eficiência</h3>
                 <table id="tab-auditoria">
                     <thead>
                         <tr>
@@ -64,13 +64,13 @@
             </div>
             
             <div class="card full">
-                <h3>Ranking Histórico de Produtos (Explodido)</h3>
+                <h3>Ranking de Produtos (Baseado em Itens Individuais)</h3>
                 <table id="tab-produtos">
                     <thead>
                         <tr>
                             <th>Sabor</th>
-                            <th>Qtd Real</th>
-                            <th>Faturamento Total</th>
+                            <th>Quantidade Real</th>
+                            <th>Faturamento Proporcional</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -80,7 +80,7 @@
     </div>
 
     <script>
-        // Formatação profissional para moeda brasileira
+        // Formatação para Real Brasileiro
         const fmt = (v) => (v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
 
         async function fetchData() {
@@ -88,21 +88,21 @@
             container.classList.add('loading');
 
             try {
-                // Rota sincronizada com o Agente Contador no Python
+                // Endpoint do Agente Contador
                 const res = await fetch('/api/v1/ml_visionario');
                 const d = await res.json();
 
                 if(d.erro) { 
-                    alert("Erro na API: " + d.erro); 
+                    alert("Erro no Servidor: " + d.erro); 
                     return; 
                 }
 
-                // 1. Atualiza os Cards de Cima
-                document.getElementById('total_vendas').innerText = fmt(d.totais.faturamento);
+                // 1. Preenche os Cards Superiores
+                document.getElementById('total_vendas').innerHTML = `${fmt(d.totais.faturamento)} <br><small style="font-size:12px; color:var(--blue)">${d.totais.total_itens} produtos vendidos</small>`;
                 document.getElementById('total_gastos').innerText = fmt(d.totais.custos);
                 document.getElementById('total_lucro').innerText = fmt(d.totais.lucro);
 
-                // 2. Renderiza Auditoria Mensal
+                // 2. Tabela de Auditoria Mensal
                 const tbodyAuditoria = document.querySelector("#tab-auditoria tbody");
                 tbodyAuditoria.innerHTML = d.auditoria_mensal.map(row => `
                     <tr>
@@ -112,27 +112,27 @@
                         <td class="${row.lucro >= 0 ? 'val-pos' : 'val-neg'}">${fmt(row.lucro)}</td>
                         <td style="color: var(--blue); font-weight: bold;">${fmt(row.ticket_medio)}</td>
                     </tr>
-                `).reverse().join(''); // Mais recentes primeiro
+                `).reverse().join(''); 
 
-                // 3. Renderiza Ranking de Produtos
+                // 3. Tabela de Ranking (usando as chaves corrigidas do Python)
                 const tbodyProdutos = document.querySelector("#tab-produtos tbody");
                 tbodyProdutos.innerHTML = d.ranking_produtos.map(p => `
                     <tr>
-                        <td class="capitalize">${p.SABOR.toLowerCase()}</td>
-                        <td><strong>${p.QTD}</strong> itens</td>
-                        <td class="val-pos">${fmt(p.VALOR)}</td>
+                        <td class="capitalize">${p.SAB_LIST.toLowerCase()}</td>
+                        <td><strong>${p.qtd}</strong> unidades</td>
+                        <td class="val-pos">${fmt(p.total)}</td>
                     </tr>
                 `).join('');
 
             } catch (err) {
-                console.error("Erro fatal de renderização:", err);
-                alert("Erro ao carregar dados. Verifique o console (F12).");
+                console.error("Erro ao carregar dados:", err);
+                alert("Falha na comunicação com a API. Verifique o console.");
             } finally {
                 container.classList.remove('loading');
             }
         }
 
-        // Inicializa o carregamento
+        // Executa ao carregar a página
         fetchData();
     </script>
 </body>
