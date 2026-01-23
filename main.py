@@ -38,17 +38,16 @@ async def api_ml():
         df_gastos['DT'] = pd.to_datetime(df_gastos['DATA E HORA'], dayfirst=True, errors='coerce')
         df_vendas = df_vendas.dropna(subset=['DT'])
 
-        # --- EXPLOSÃO DE SABORES (CORRIGIDO) ---
+        # Explosão de Sabores (Contagem Real de Itens)
         df_vendas['SAB_LIST'] = df_vendas['SABORES'].astype(str).str.split(',')
-        # Aqui estava o erro 'S_LIST' vs 'SAB_LIST'
         df_exploded = df_vendas.explode('SAB_LIST') 
         df_exploded['SAB_LIST'] = df_exploded['SAB_LIST'].str.strip().str.upper()
 
-        # Ajuste de valor proporcional por item na linha
+        # Proporcional de valor por item para ranking justo
         df_exploded['COUNT_ITENS'] = df_exploded.groupby(level=0)['SAB_LIST'].transform('count')
         df_exploded['VAL_UNITARIO'] = df_exploded['VAL_NUM'] / df_exploded['COUNT_ITENS']
 
-        # Agrupamento Mensal
+        # Agrupamento Mensal (Vendas, Gastos e Volume de Itens)
         vendas_m = df_vendas.set_index('DT').resample('ME')['VAL_NUM'].sum()
         gastos_m = df_gastos.set_index('DT').resample('ME')['VAL_NUM'].sum()
         itens_m = df_exploded.set_index('DT').resample('ME')['SAB_LIST'].count()
@@ -58,7 +57,7 @@ async def api_ml():
         df_resumo['ticket_medio'] = df_resumo['vendas'] / df_resumo['itens'].replace(0, 1)
         df_resumo['mes'] = df_resumo.index.strftime('%m/%Y')
 
-        # Ranking com valores proporcionais
+        # Ranking de Produtos
         top_produtos = df_exploded.groupby('SAB_LIST').agg(
             total=('VAL_UNITARIO', 'sum'),
             qtd=('SAB_LIST', 'count')
@@ -75,7 +74,6 @@ async def api_ml():
             "ranking_produtos": top_produtos.to_dict(orient='records')
         }
     except Exception as e:
-        # Retorna o erro exato para o log/alerta do navegador
         return {"erro": str(e)}
 
 @app.get("/", response_class=HTMLResponse)
