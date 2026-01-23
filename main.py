@@ -38,16 +38,16 @@ async def api_ml():
         df_gastos['DT'] = pd.to_datetime(df_gastos['DATA E HORA'], dayfirst=True, errors='coerce')
         df_vendas = df_vendas.dropna(subset=['DT'])
 
-        # Explosão de Sabores (Contagem Real de Itens)
+        # --- EXPLOSÃO DE SABORES (Visão Atômica de Itens) ---
         df_vendas['SAB_LIST'] = df_vendas['SABORES'].astype(str).str.split(',')
         df_exploded = df_vendas.explode('SAB_LIST') 
         df_exploded['SAB_LIST'] = df_exploded['SAB_LIST'].str.strip().str.upper()
 
-        # Proporcional de valor por item para ranking justo
+        # Proporcional de valor para ranking
         df_exploded['COUNT_ITENS'] = df_exploded.groupby(level=0)['SAB_LIST'].transform('count')
         df_exploded['VAL_UNITARIO'] = df_exploded['VAL_NUM'] / df_exploded['COUNT_ITENS']
 
-        # Agrupamento Mensal (Vendas, Gastos e Volume de Itens)
+        # Agrupamento Mensal: Agora incluindo o volume de ITENS
         vendas_m = df_vendas.set_index('DT').resample('ME')['VAL_NUM'].sum()
         gastos_m = df_gastos.set_index('DT').resample('ME')['VAL_NUM'].sum()
         itens_m = df_exploded.set_index('DT').resample('ME')['SAB_LIST'].count()
