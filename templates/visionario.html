@@ -23,22 +23,19 @@
             border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 30px; 
         }
 
-        /* [V8] GRID DE KPIs */
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 25px; }
         
         .card { 
             background: var(--surface); border: 1px solid var(--border); 
-            border-radius: 8px; padding: 20px; transition: transform 0.2s;
+            border-radius: 8px; padding: 20px;
         }
         .card h3 { margin: 0 0 10px 0; font-size: 0.75rem; text-transform: uppercase; color: #8b949e; }
         
-        /* Valores */
         .val { font-size: 1.8rem; font-weight: 700; margin: 0; }
         .val-pos { color: var(--accent); }
         .val-neg { color: var(--red); }
         .sub { font-size: 0.85rem; color: #8b949e; margin-top: 5px; }
 
-        /* [V10] TABELAS */
         .table-wrapper { overflow-x: auto; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
@@ -47,7 +44,7 @@
         .capitalize { text-transform: capitalize; }
         .loading { opacity: 0.5; pointer-events: none; }
 
-        @media (max-width: 800px) {
+        @media (max-width: 850px) {
             .grid-rankings { grid-template-columns: 1fr !important; }
         }
     </style>
@@ -58,9 +55,9 @@
     <div class="header">
         <div>
             <h1 style="margin:0; font-size: 1.5rem;">Analista Visionário</h1>
-            <p style="margin:5px 0 0 0; color: #8b949e;">Governança de Dados: Auditoria Macro Anual</p>
+            <p style="margin:5px 0 0 0; color: #8b949e;">Governança de TI: Auditoria de Dados Macro</p>
         </div>
-        <button onclick="fetchData()" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+        <button onclick="fetchData()" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 8px 15px; border-radius: 6px; cursor: pointer;">
             🔄 Sincronizar BI
         </button>
     </div>
@@ -82,7 +79,7 @@
     </div>
 
     <div class="card" style="margin-bottom: 25px;">
-        <h3>📊 Performance Mensal Detalhada</h3>
+        <h3>📊 Auditoria de Performance Mensal</h3>
         <div class="table-wrapper">
             <table id="tab-auditoria">
                 <thead>
@@ -102,11 +99,11 @@
 
     <div class="grid" style="grid-template-columns: 1fr 1fr;" id="grid-rankings">
         <div class="card">
-            <h3>🏆 Top 10 Produtos (Volume)</h3>
+            <h3>🏆 Top 10 Produtos (Vendas)</h3>
             <div class="table-wrapper">
                 <table id="tab-produtos">
                     <thead>
-                        <tr><th>Sabor/Item</th><th>Qtd</th><th>Receita</th></tr>
+                        <tr><th>Sabor</th><th>Volume</th><th>Receita</th></tr>
                     </thead>
                     <tbody></tbody>
                 </table>
@@ -114,11 +111,11 @@
         </div>
 
         <div class="card" style="border-top-color: var(--red);">
-            <h3>📉 Top 10 Gastos (Insumos)</h3>
+            <h3>📉 Top 10 Gastos (Volume Real)</h3>
             <div class="table-wrapper">
                 <table id="tab-gastos-global">
                     <thead>
-                        <tr><th>Insumo</th><th>Compras</th><th>Total Gasto</th></tr>
+                        <tr><th>Insumo</th><th>Qtd. Acumulada</th><th>Total Investido</th></tr>
                     </thead>
                     <tbody></tbody>
                 </table>
@@ -138,18 +135,13 @@
             const response = await fetch('/api/v1/ml_visionario');
             const d = await response.json();
 
-            if(d.erro) {
-                console.error("Erro do Servidor:", d.erro);
-                return;
-            }
-
-            // Injeção KPIs
+            // KPIs
             document.getElementById('total_faturamento').innerText = fmt(d.totais.faturamento);
-            document.getElementById('total_itens').innerText = `${d.totais.total_itens} itens no período`;
+            document.getElementById('total_itens').innerText = `${d.totais.total_itens} itens processados`;
             document.getElementById('total_gastos').innerText = fmt(d.totais.custos);
             document.getElementById('total_lucro').innerText = fmt(d.totais.lucro);
 
-            // Tabela Auditoria Mensal (Reverse para ver o mês atual primeiro)
+            // Auditoria (Mês Atual Primeiro)
             document.querySelector("#tab-auditoria tbody").innerHTML = d.auditoria_mensal.map(row => `
                 <tr>
                     <td><strong>${row.mes}</strong></td>
@@ -161,32 +153,31 @@
                 </tr>
             `).reverse().join(''); 
 
-            // Ranking de Vendas
+            // Ranking Vendas
             document.querySelector("#tab-produtos tbody").innerHTML = d.ranking_produtos.map(p => `
                 <tr>
                     <td class="capitalize">${p.SAB_LIST.toLowerCase()}</td>
-                    <td><strong>${p.qtd}</strong></td>
+                    <td><strong>${p.qtd}</strong> un.</td>
                     <td class="val-pos">${fmt(p.total)}</td>
                 </tr>
             `).join('');
 
-            // Ranking de Gastos (Calcanhar de Aquiles)
+            // [LÓGICA CORRETA]: Ranking Gastos com Volume Real
             document.querySelector("#tab-gastos-global tbody").innerHTML = d.ranking_gastos.map(g => `
                 <tr>
                     <td class="capitalize"><strong>${g.PRODUTO.toLowerCase()}</strong></td>
-                    <td>${g.qtd_compras}x</td>
+                    <td><span style="color: var(--blue); font-weight: bold;">${g.volume_real}</span> un/kg</td>
                     <td class="val-neg">${fmt(g.total_gasto)}</td>
                 </tr>
             `).join('');
 
         } catch (err) { 
-            console.error("Falha na sincronização BI:", err);
+            console.error("Erro na Matrix BI:", err);
         } finally { 
             container.classList.remove('loading'); 
         }
     }
 
-    // Executa ao carregar
     fetchData();
 </script>
 
