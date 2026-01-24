@@ -2,184 +2,78 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analista Visionário | Visão Macro André</title>
-    
+    <title>Analista Visionário | Macro</title>
     <style>
-        :root { 
-            --bg: #0d1117; --surface: #161b22; --border: #30363d; 
-            --accent: #238636; --blue: #58a6ff; --red: #f85149; --text: #c9d1d9;
-        }
-        
-        body { 
-            font-family: 'Inter', -apple-system, sans-serif; 
-            background: var(--bg); color: var(--text); margin: 0; padding: 20px; 
-        }
-
+        :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --accent: #238636; --blue: #58a6ff; --red: #f85149; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #c9d1d9; margin: 0; padding: 20px; }
         .container { max-width: 1100px; margin: auto; }
-
-        .header { 
-            display: flex; justify-content: space-between; align-items: center; 
-            border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 30px; 
-        }
-
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 25px; }
-        
-        .card { 
-            background: var(--surface); border: 1px solid var(--border); 
-            border-radius: 8px; padding: 20px;
-        }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 30px; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
         .card h3 { margin: 0 0 10px 0; font-size: 0.75rem; text-transform: uppercase; color: #8b949e; }
-        
-        .val { font-size: 1.8rem; font-weight: 700; margin: 0; }
-        .val-pos { color: var(--accent); }
+        .val-macro { font-size: 1.8rem; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { text-align: left; color: #8b949e; border-bottom: 1px solid var(--border); padding: 12px; font-size: 0.7rem; }
+        td { padding: 12px; border-bottom: 1px solid #21262d; }
+        .val-pos { color: #3fb950; }
         .val-neg { color: var(--red); }
-        .sub { font-size: 0.85rem; color: #8b949e; margin-top: 5px; }
-
-        .table-wrapper { overflow-x: auto; margin-top: 10px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
-        th { color: #8b949e; font-weight: 500; text-transform: uppercase; font-size: 0.7rem; }
-        
         .capitalize { text-transform: capitalize; }
-        .loading { opacity: 0.5; pointer-events: none; }
-
-        @media (max-width: 850px) {
-            .grid-rankings { grid-template-columns: 1fr !important; }
-        }
     </style>
 </head>
 <body>
+    <div class="container" id="main-content">
+        <div class="header">
+            <h1>Analista Visionário <small style="font-size: 12px; color: var(--blue);">Governança Macro</small></h1>
+            <button onclick="fetchData()" style="cursor:pointer; background:#21262d; color:#fff; border:1px solid var(--border); padding:8px 15px; border-radius:6px;">🔄 Atualizar BI</button>
+        </div>
 
-<div class="container" id="main-container">
-    <div class="header">
-        <div>
-            <h1 style="margin:0; font-size: 1.5rem;">Analista Visionário</h1>
-            <p style="margin:5px 0 0 0; color: #8b949e;">Governança de TI: Auditoria de Dados Macro</p>
+        <div class="grid">
+            <div class="card"><h3>Faturamento</h3><div class="val-macro" id="total_vendas">R$ 0,00</div></div>
+            <div class="card"><h3>Despesas</h3><div class="val-macro val-neg" id="total_gastos">R$ 0,00</div></div>
+            <div class="card"><h3>Lucro Consolidado</h3><div class="val-macro val-pos" id="total_lucro">R$ 0,00</div></div>
         </div>
-        <button onclick="fetchData()" style="background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 8px 15px; border-radius: 6px; cursor: pointer;">
-            🔄 Sincronizar BI
-        </button>
-    </div>
 
-    <div class="grid">
-        <div class="card">
-            <h3>Faturamento Bruto</h3>
-            <p class="val" id="total_faturamento">R$ 0,00</p>
-            <p class="sub" id="total_itens">0 itens processados</p>
-        </div>
-        <div class="card">
-            <h3>Total de Gastos</h3>
-            <p class="val val-neg" id="total_gastos">R$ 0,00</p>
-        </div>
-        <div class="card">
-            <h3>Lucro Líquido Anual</h3>
-            <p class="val val-pos" id="total_lucro">R$ 0,00</p>
-        </div>
-    </div>
-
-    <div class="card" style="margin-bottom: 25px;">
-        <h3>📊 Auditoria de Performance Mensal</h3>
-        <div class="table-wrapper">
-            <table id="tab-auditoria">
-                <thead>
-                    <tr>
-                        <th>Mês/Ano</th>
-                        <th>Vendas</th>
-                        <th>Volume</th>
-                        <th>Gastos</th>
-                        <th>Lucro</th>
-                        <th>Ticket Médio</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="grid" style="grid-template-columns: 1fr 1fr;" id="grid-rankings">
-        <div class="card">
-            <h3>🏆 Top 10 Produtos (Vendas)</h3>
-            <div class="table-wrapper">
-                <table id="tab-produtos">
-                    <thead>
-                        <tr><th>Sabor</th><th>Volume</th><th>Receita</th></tr>
-                    </thead>
-                    <tbody></tbody>
+        <div class="grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="card">
+                <h3>🏆 TOP 10 PRODUTOS (VENDAS)</h3>
+                <table>
+                    <thead><tr><th>Sabor</th><th>Volume</th><th>Receita</th></tr></thead>
+                    <tbody id="corpo-produtos"></tbody>
                 </table>
             </div>
-        </div>
-
-        <div class="card" style="border-top-color: var(--red);">
-            <h3>📉 Top 10 Gastos (Volume Real)</h3>
-            <div class="table-wrapper">
-                <table id="tab-gastos-global">
-                    <thead>
-                        <tr><th>Insumo</th><th>Qtd. Acumulada</th><th>Total Investido</th></tr>
-                    </thead>
-                    <tbody></tbody>
+            <div class="card" style="border-top: 3px solid var(--red);">
+                <h3>📉 CALCANHAR DE AQUILES (GASTOS REAIS)</h3>
+                <table>
+                    <thead><tr><th>Insumo</th><th>Qtd Acumulada</th><th>Total Gasto</th></tr></thead>
+                    <tbody id="corpo-gastos"></tbody>
                 </table>
             </div>
         </div>
     </div>
-</div>
 
-<script>
-    const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+    <script>
+        const fmt = (v) => v.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
 
-    async function fetchData() {
-        const container = document.getElementById('main-container');
-        container.classList.add('loading');
+        async function fetchData() {
+            try {
+                const res = await fetch('/api/v1/ml_visionario');
+                const d = await res.json();
+                
+                document.getElementById('total_vendas').innerText = fmt(d.totais.faturamento);
+                document.getElementById('total_gastos').innerText = fmt(d.totais.custos);
+                document.getElementById('total_lucro').innerText = fmt(d.totais.lucro);
 
-        try {
-            const response = await fetch('/api/v1/ml_visionario');
-            const d = await response.json();
+                document.getElementById('corpo-produtos').innerHTML = d.ranking_produtos.map(p => `
+                    <tr><td class="capitalize">${p.SAB_LIST.toLowerCase()}</td><td>${p.qtd} un.</td><td class="val-pos">${fmt(p.total)}</td></tr>
+                `).join('');
 
-            // KPIs
-            document.getElementById('total_faturamento').innerText = fmt(d.totais.faturamento);
-            document.getElementById('total_itens').innerText = `${d.totais.total_itens} itens processados`;
-            document.getElementById('total_gastos').innerText = fmt(d.totais.custos);
-            document.getElementById('total_lucro').innerText = fmt(d.totais.lucro);
-
-            // Auditoria (Mês Atual Primeiro)
-            document.querySelector("#tab-auditoria tbody").innerHTML = d.auditoria_mensal.map(row => `
-                <tr>
-                    <td><strong>${row.mes}</strong></td>
-                    <td>${fmt(row.vendas)}</td>
-                    <td>${row.itens} un.</td>
-                    <td>${fmt(row.gastos)}</td>
-                    <td class="${row.lucro >= 0 ? 'val-pos' : 'val-neg'}">${fmt(row.lucro)}</td>
-                    <td style="color: var(--blue); font-weight: bold;">${fmt(row.ticket_medio)}</td>
-                </tr>
-            `).reverse().join(''); 
-
-            // Ranking Vendas
-            document.querySelector("#tab-produtos tbody").innerHTML = d.ranking_produtos.map(p => `
-                <tr>
-                    <td class="capitalize">${p.SAB_LIST.toLowerCase()}</td>
-                    <td><strong>${p.qtd}</strong> un.</td>
-                    <td class="val-pos">${fmt(p.total)}</td>
-                </tr>
-            `).join('');
-
-            // [LÓGICA CORRETA]: Ranking Gastos com Volume Real
-            document.querySelector("#tab-gastos-global tbody").innerHTML = d.ranking_gastos.map(g => `
-                <tr>
-                    <td class="capitalize"><strong>${g.PRODUTO.toLowerCase()}</strong></td>
-                    <td><span style="color: var(--blue); font-weight: bold;">${g.volume_real}</span> un/kg</td>
-                    <td class="val-neg">${fmt(g.total_gasto)}</td>
-                </tr>
-            `).join('');
-
-        } catch (err) { 
-            console.error("Erro na Matrix BI:", err);
-        } finally { 
-            container.classList.remove('loading'); 
+                // Injeção do Volume Real
+                document.getElementById('corpo-gastos').innerHTML = d.ranking_gastos.map(g => `
+                    <tr><td class="capitalize">${g.PRODUTO.toLowerCase()}</td><td><strong>${g.volume_real}</strong> un/kg</td><td class="val-neg">${fmt(g.total_gasto)}</td></tr>
+                `).join('');
+            } catch (e) { console.error(e); }
         }
-    }
-
-    fetchData();
-</script>
-
+        fetchData();
+    </script>
 </body>
 </html>
